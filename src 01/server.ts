@@ -1,7 +1,8 @@
 import express from 'express';
 import ejs from 'ejs';
 import path from 'path';
-import puppeteer  from 'puppeteer';
+import pdf from 'html-pdf';
+
 
 const app = express();
 
@@ -24,26 +25,6 @@ const passengers = [
     }
 ]
 
-app.get('/pdf',  async (request, response) => {
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-
-    await page.goto('http://localhost:3333', {
-        waitUntil: 'networkidle0',
-    })
-
-    const pdf = await page.pdf({
-        printBackground: true,
-        format: 'letter',
-    })
-
-    await browser.close();
-
-    response.contentType('application/pdf');
-
-    return response.send(pdf)
-})
-
 app.get('/', (request, response) =>{
     const filePath = path.resolve(__dirname, 'print.ejs');
     ejs.renderFile(filePath, { passengers}, (err, data) =>{
@@ -51,7 +32,28 @@ app.get('/', (request, response) =>{
             return response.send('erro na leitura do arquivo')
         }
 
-       return response.send(data)
+        //config da pagina
+        const options = {
+            height: '11.25in',
+            width: '8.5in',
+            header: {
+                height: '20mm',
+
+            },
+            footer: {
+                height: "20mm"
+            }
+        }
+
+        pdf.create(data, options).toFile('report.pdf',(err, data) =>{
+            if(err){
+                return response.send('erro ao gerar o pdf')
+            }
+
+            return response.send(data)
+        } ); 
+
+
         
     });
 })
